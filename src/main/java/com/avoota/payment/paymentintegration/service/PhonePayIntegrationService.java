@@ -2,12 +2,12 @@ package com.avoota.payment.paymentintegration.service;
 
 import com.avoota.payment.paymentintegration.model.PaymentRequest;
 import com.avoota.payment.paymentintegration.model.PaymentResponse;
+import com.avoota.payment.paymentintegration.model.PaymentStatus;
 import com.phonepe.sdk.pg.Env;
 import com.phonepe.sdk.pg.common.http.PhonePeResponse;
 import com.phonepe.sdk.pg.payments.v1.PhonePePaymentClient;
 import com.phonepe.sdk.pg.payments.v1.models.request.PgPayRequest;
-import com.phonepe.sdk.pg.payments.v1.models.response.PayPageInstrumentResponse;
-import com.phonepe.sdk.pg.payments.v1.models.response.PgPayResponse;
+import com.phonepe.sdk.pg.payments.v1.models.response.*;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,7 +28,7 @@ public class PhonePayIntegrationService {
                 .merchantId(merchantId)
                 .merchantTransactionId(txId)
                 .merchantUserId("merchantUserId")
-                .redirectUrl("http://localhost:4200/ordersummary")
+                .redirectUrl("http://localhost:8020/checkStatus/"+txId)
                 .redirectMode(redirectMode)
                 .build();
         PhonePeResponse<PgPayResponse> payResponse=phonepeClient.pay(pgPayRequest);
@@ -37,5 +37,25 @@ public class PhonePayIntegrationService {
         PaymentResponse response = new PaymentResponse();
         response.setUrl(url);
         return  response;
+    }
+
+    public PaymentStatus checkStatus(String txId){
+        boolean shouldPublishEvents = false;
+        PhonePePaymentClient phonepeClient = new PhonePePaymentClient(
+                merchantId, saltKey, saltIndex, env, shouldPublishEvents);
+
+        PhonePeResponse<PgTransactionStatusResponse> statusResponse=phonepeClient.checkStatus(txId);
+        PgPaymentInstrument pgPaymentInstrument=statusResponse.getData().getPaymentInstrument();
+
+
+        PaymentStatus status = new PaymentStatus();
+
+        status.setCode(statusResponse.getCode());
+        status.setData(statusResponse.getData());
+        status.setSuccess(statusResponse.getSuccess());
+        status.setMessage(statusResponse.getMessage());
+
+
+        return  status;
     }
 }
